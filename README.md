@@ -1,7 +1,9 @@
 # matlab-fem-project
+
 <div style="text-align: center;">
   <img src="plot_k_32.png" alt="Plot of K = 32" width="400"/>
 </div>
+
 This repository contains a Finite Element Method (FEM) solver for structural mechanics simulations in both 1D and 2D. Developed as part of coursework for ME C180 at UC Berkeley.
 It consists of various projects (1 so far) intended to tackle various FEM problems.
 
