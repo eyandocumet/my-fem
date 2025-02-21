@@ -2,65 +2,64 @@ clear
 clc
 
 % Vector of elements we want to evaluate at.
-NeVec = [4,16,64,256,1024];
-
+ne_vec = [4,16,64,256,1024];
 
 % Vector of k constants to evaluate at.
-kVec = [1,2,4,16,32];
+k_vec = [1,2,4,16,32];
 
 % Parameters --
 x0 = 0;         % Left Boundary
 L = 1;          % Domain Length
 p = 1;          % Element polynomial order (1 = Linear)
-Efunc = 0.2;    % Stiffness Function
-BC0 = 0;        % u(0) = 0
-BCL = 1;        % u(L) = 1
+efunc = 0.2;    % Stiffness Function
+bc0 = 0;        % u(0) = 0
+bcl = 1;        % u(L) = 1
 
 % Array to see if BC is Dirichlet (1) or Neumann (0)
-BCType = [1 1];
-% First entry (BCType(1)) is for left boundary
-% Second entry (BCType(2)) is for right boundary
+bc_type = [1 1];
+% First entry (bc_type(1)) is for left boundary
+% Second entry (bc_type(2)) is for right boundary
 
 % Equations --
 force = @(x, k) -(k^2 .* sin((2 * pi * k * x) / L) + 2 * x.^2); % Given
 
-uTrue = @(x, k) (-L^2) / (4 * Efunc * pi^2) .* sin(2 * pi * k * x / L) + ...
-    (x.^4) / (6 * Efunc) + ((1 / L) + (L * sin(2 * pi * k) / (4 * Efunc * pi^2)) - ...
-    (L^3 / (6 * Efunc))) .* x; % Solved by hand (See #1)
+u_true = @(x, k) (-L^2) / (4 * efunc * pi^2) .* sin(2 * pi * k * x / L) + ...
+    (x.^4) / (6 * efunc) + ((1 / L) + (L * sin(2 * pi * k) / (4 * efunc * pi^2)) - ...
+    (L^3 / (6 * efunc))) .* x; % Solved by hand (See #1)
 
-duTrue = @(x, k) -(L * k .* cos((2 * pi * k * x) / L)) / (2 * pi * Efunc) + ...
-    (2 * x.^3) / (3 * Efunc) + ...
-    (L * sin(2 * pi * k)) / (4 * pi^2 * Efunc) - ...
-    L^3 / (6 * Efunc) + ...
+du_true = @(x, k) -(L * k .* cos((2 * pi * k * x) / L)) / (2 * pi * efunc) + ...
+    (2 * x.^3) / (3 * efunc) + ...
+    (L * sin(2 * pi * k)) / (4 * pi^2 * efunc) - ...
+    L^3 / (6 * efunc) + ...
     1 / L; % Solved w/ Symbolic Toolbox
 
 disp("Solving HW #1...")
 %% P3a
 disp("(a) What is the minimum number of elements for various values of k?")
 tic;
-minNe = zeros(numel(kVec),1);
-for i = 1:numel(kVec)   % loop through stiffness values
-    k_i = kVec(i);
+min_ne = zeros(numel(k_vec),1);
+for i = 1:numel(k_vec)   % loop through stiffness values
+    k_i = k_vec(i);
 
-    errFlag = false;
-    Ne = 4; % coarse initial mesh
-    while ~errFlag
+    err_flag = false;
+    ne = 4; % coarse initial mesh
+    while ~err_flag
         % mesh and solve FEM problem
-        h = 1/Ne * ones(Ne,1);
-        [xglobe, Nn, conn] = Mesh1D(p, Ne, x0, h);
-        [uN, error] = myFEM1D(p, Ne, Nn, conn, xglobe, @(x) force(x, k_i), Efunc, BC0, BCL, BCType, @(x) duTrue(x, k_i) );
+        h = 1/ne * ones(ne,1);
+        [x_globe, nn, conn] = mesh1d(p, ne, x0, h);
+        [u_n, error] = my_fem1d(p, ne, nn, conn, x_globe, @(x) force(x, k_i), efunc, bc0, bcl, bc_type, @(x) du_true(x, k_i) );
 
         if error <= 0.05    % if error is above threshold, increment element count and try again
-            minNe(i) = Ne;
-            errFlag = true;
+            min_ne(i) = ne;
+            err_flag = true;
         else
-            Ne = Ne + 1;
+            ne = ne + 1;
         end  
     end
 end
 toc;
 
-min_elements_table = table(kVec', minNe, 'VariableNames', {'k', 'Min_Ne'})
+min_elements_table = table(k_vec', min_ne, 'VariableNames', {'k', 'Min_Ne'})
 
 %% P3b
 disp("(b) Plot the numerical solutions for N = 4, 16, 64, 256, 1024, for each k, along with the true solution (make a plot u vs x for each k, with the true solution and the numerical solutions visible and discuss).")
@@ -74,36 +73,36 @@ colors = {'b','g','r','k','m','c'};
 linestyle = {'-','--','-.',':'};
 % this function will do the circular selection
 % Example:  getprop(colors, 7) = 'b'
-getFirst = @(v)v{1}; 
-getprop = @(options, idx)getFirst(circshift(options,-idx+1));
+get_first = @(v)v{1}; 
+getprop = @(options, idx)get_first(circshift(options,-idx+1));
 
 
-for j = 1:numel(kVec)
+for j = 1:numel(k_vec)
 figure
 hold on;
 
 % Iterating k
-k_j = kVec(j);
+k_j = k_vec(j);
 
-    for i = 1:numel(NeVec)
-        Ne = NeVec(i);
-        h = 1/Ne * ones(Ne,1);
+    for i = 1:numel(ne_vec)
+        ne = ne_vec(i);
+        h = 1/ne * ones(ne,1);
 
-        [xglobe, Nn, conn] = Mesh1D(p, Ne, x0, h);
+        [x_globe, nn, conn] = mesh1d(p, ne, x0, h);
 
-        [uN, error] = myFEM1D(p, Ne, Nn, conn, xglobe, @(x) force(x, k_j), Efunc, BC0, BCL, BCType, @(x) duTrue(x, k_j) );
+        [u_n, error] = my_fem1d(p, ne, nn, conn, x_globe, @(x) force(x, k_j), efunc, bc0, bcl, bc_type, @(x) du_true(x, k_j) );
 
-        plot(xglobe, uN,...
+        plot(x_globe, u_n,...
             'color',getprop(colors,i),...
             'Marker',getprop(markers,i),...
             'MarkerSize', 2,...
             'linestyle',getprop(linestyle,i),...
             'LineWidth',1,...
-            'DisplayName', ['Ne = ', num2str(Ne)]);
+            'DisplayName', ['Ne = ', num2str(ne)]);
     end
 
-    xTrue = 0:0.001:1;
-    plot(xTrue, uTrue(xTrue, k_j), 'DisplayName', 'True Sol','LineWidth',1);
+    x_true = 0:0.001:1;
+    plot(x_true, u_true(x_true, k_j), 'DisplayName', 'True Sol','LineWidth',1);
 
     title(['k = ' num2str(k_j)], FontSize=24)
     xlabel('x');
@@ -126,22 +125,22 @@ close all
 
 figure
 
-for i = 1:numel(kVec)
-    k_i = kVec(i);  % Corrected this line
+for i = 1:numel(k_vec)
+    k_i = k_vec(i);  % Corrected this line
 
-    error_k_i = zeros(1, numel(NeVec));
+    error_k_i = zeros(1, numel(ne_vec));
 
-    for j = 1:numel(NeVec)
-        Ne = NeVec(j);
-        h = 1/Ne * ones(Ne, 1);
+    for j = 1:numel(ne_vec)
+        ne = ne_vec(j);
+        h = 1/ne * ones(ne, 1);
 
-        [xglobe, Nn, conn] = Mesh1D(p, Ne, x0, h);
+        [x_globe, nn, conn] = mesh1d(p, ne, x0, h);
 
-        [~, error] = myFEM1D(p, Ne, Nn, conn, xglobe, @(x) force(x, k_i), Efunc, BC0, BCL, BCType, @(x) duTrue(x, k_i));
+        [~, error] = my_fem1d(p, ne, nn, conn, x_globe, @(x) force(x, k_i), efunc, bc0, bcl, bc_type, @(x) du_true(x, k_i));
         error_k_i(j) = error;  % Corrected this line
     end
 
-    plot(1./NeVec, error_k_i, ...
+    plot(1./ne_vec, error_k_i, ...
         'color', getprop(colors, i), ...
         'Marker', getprop(markers, i), ...
         'MarkerSize', 5, ...
@@ -176,116 +175,116 @@ close all
 
 disp('See chart.');
 
-%% Mesh1D - 
+%% mesh1d - 
 % Generates a 1D mesh along a domain.
-function [xglobe, Nn, conn] = Mesh1D(p, Ne, x0, h)
-    Nn = p*Ne+1; % Number of nodes.
-    Nne = p + 1; % Number of nodes per element
+function [x_globe, nn, conn] = mesh1d(p, ne, x0, h)
+    nn = p*ne+1; % Number of nodes.
+    nne = p + 1; % Number of nodes per element
 
     % Initializing real domain positions
-    xglobe = x0*ones(1,Nn);
-    for node = 2:Nn
-        xglobe(node) = xglobe(node-1) + h(node-1);
+    x_globe = x0*ones(1,nn);
+    for node = 2:nn
+        x_globe(node) = x_globe(node-1) + h(node-1);
     end
     
     % Initializing connectivity matrix
     % <!> NOTE: Temporary for project 1. Will need to upgrade later. <!>
-    conn = [(1:Nn-1)' (2:Nn)'];
+    conn = [(1:nn-1)' (2:nn)'];
 end
-%% myFEM1D - 
+%% my_fem1d - 
 % Performs FEA on a 1D stick.
-function [uN, error] = myFEM1D(p, Ne, Nn, conn, xglobe, force, Efunc, BC0, BCL, BCType, duTrue)
+function [u_n, error] = my_fem1d(p, ne, nn, conn, x_globe, force, efunc, bc0, bcl, bc_type, du_true)
     % Defining weights and Gauss points
-    [wts, pts] = myGauss(p);
+    [wts, pts] = my_gauss(p);
 
     % Evaluating shape functions and their derivatives
-    [ShapeFunc, ShapeDer] = evalShape(p,pts);
+    [shape_func, shape_der] = eval_shape(p,pts);
 
     % Initializing stiffness Matrix
-    K = zeros(Nn, Nn);
+    k = zeros(nn, nn);
 
     % Initializing FEM solution vector & forcing vector
-    uN = zeros(Nn, 1);
-    R = zeros(Nn, 1);
+    u_n = zeros(nn, 1);
+    r = zeros(nn, 1);
 
     % And now, the FEM
     % Loop through each element - 
-    for elem = 1:Ne
+    for elem = 1:ne
         % Extract nodal indices (id) from conn matrix
         id = conn(elem, :); % Whole row-elem
         for q = 1:numel(pts) % Looping through each gauss point
             % Evaluating Jacobian
-            J = xglobe(id) * ShapeDer(q,:)';
+            j = x_globe(id) * shape_der(q,:)';
 
             % Evaluating & "stamping in" elemental stiffness matrix (2 x 2)
-            Ke = wts(q) * ShapeDer(q,:)' * (1./J) * Efunc * ShapeDer(q, :);
-            K(id, id) = K(id, id) + Ke;
+            ke = wts(q) * shape_der(q,:)' * (1./j) * efunc * shape_der(q, :);
+            k(id, id) = k(id, id) + ke;
 
             % Map gauss point from local to global coordinates
-            x_zeta = xglobe(id) * ShapeFunc(q,:)'; 
+            x_zeta = x_globe(id) * shape_func(q,:)'; 
             
             % Evaluating and assembling forcing function for elemental loading terms
-            Re = wts(q)*ShapeFunc(q,:)*force(x_zeta)*J;
-            R(id) = R(id) + Re';            
+            re = wts(q)*shape_func(q,:)*force(x_zeta)*j;
+            r(id) = r(id) + re';            
         end
     end
     
     % Boundary conditions
-    if BCType(1) % Left Dirichlet BC
-        uN(1) = BC0;
+    if bc_type(1) % Left Dirichlet BC
+        u_n(1) = bc0;
         % Adjust second loading term 
-        R(2) = R(2) - K(2,1)*BC0;
+        r(2) = r(2) - k(2,1)*bc0;
     else % Nothing else for now
     end
 
-    if BCType(2) % Right Dirichlet BC
-        uN(Nn) = BCL;
+    if bc_type(2) % Right Dirichlet BC
+        u_n(nn) = bcl;
         % Adjust second to last loading term 
-        R(Nn-1) = R(Nn-1) - K(Nn-1, Nn)*BCL;
+        r(nn-1) = r(nn-1) - k(nn-1, nn)*bcl;
     else % Nothing else for now
     end
     
-    % Calculating uN (with removed BC terms)
-    uN(2:end-1) = K(2:end-1, 2:end-1) \ R(2:end-1);
+    % Calculating u_n (with removed BC terms)
+    u_n(2:end-1) = k(2:end-1, 2:end-1) \ r(2:end-1);
     
     % Evaluating Error
     % Initialize error numerator and denominator
-    errNum = 0;
-    errDen = 0;
+    err_num = 0;
+    err_den = 0;
 
-    for e = 1:Ne
+    for e = 1:ne
         % Extract element ID
         id = conn(e, :);
 
         % Loop through Gauss points
         for q = 1:numel(pts)
 
-            J = xglobe(id) * ShapeDer(q,:)'; % See above
+            j = x_globe(id) * shape_der(q,:)'; % See above
 
             % Derivative of numerical solution
-            duN = uN(id)' * ShapeDer(q,:)' * (1/J); % Given form DQ 4
+            du_n = u_n(id)' * shape_der(q,:)' * (1/j); % Given form DQ 4
 
             % Map gauss point from local to true spatial coordinates
-            x_zeta = xglobe(id) * ShapeFunc(q,:)'; % See above
+            x_zeta = x_globe(id) * shape_func(q,:)'; % See above
 
             % Error numerator and denominator
-            errNum = errNum + wts(q) * (duTrue(x_zeta)-duN) * Efunc * (duTrue(x_zeta)-duN) * J;
-            errDen = errDen + wts(q) * (duTrue(x_zeta)) * Efunc * (duTrue(x_zeta)) * J;
+            err_num = err_num + wts(q) * (du_true(x_zeta)-du_n) * efunc * (du_true(x_zeta)-du_n) * j;
+            err_den = err_den + wts(q) * (du_true(x_zeta)) * efunc * (du_true(x_zeta)) * j;
         end
     end
     
     % Final error
-    error = sqrt(errNum/errDen);
+    error = sqrt(err_num/err_den);
 end
 
-%% evalShape - 
+%% eval_shape - 
 % Determines the shape functions & their derivatives.
-function [ShapeFunc, ShapeDer] = evalShape(p,pts)
+function [shape_func, shape_der] = eval_shape(p,pts)
     switch p
         case 1
         % Linear Shape Functions (HW#1)
-        ShapeFunc = [(1-pts)./2, (1+pts)./2]; % Eq 3.27
-        ShapeDer = [-1/2, 1/2].*ones(size(pts));
+        shape_func = [(1-pts)./2, (1+pts)./2]; % Eq 3.27
+        shape_der = [-1/2, 1/2].*ones(size(pts));
         
         % case 2
         % Quadratic Shape Functions (HW#2)
@@ -295,12 +294,12 @@ function [ShapeFunc, ShapeDer] = evalShape(p,pts)
     end
 end
 
-%% myGauss - 
+%% my_gauss - 
 % Gaussian Quadrature Function; Quick Integration
-function [wts,pts] = myGauss(p)
-    ptsNeed = ceil((p+1)/2);
+function [wts, pts] = my_gauss(p)
+    pts_need = ceil((p + 1) / 2);
     
-    switch ptsNeed + 2
+    switch pts_need + 2
         case 1
             wts = 2;
             pts = 0;
@@ -317,31 +316,32 @@ function [wts,pts] = myGauss(p)
             pts = [-0.3399810435848563; 0.3399810435848563; ...
                 -0.8611363115940526; 0.8611363115940526];
         case 5
-            wts = [0.5688888888888889; 0.4786286704993665;...
+            wts = [0.5688888888888889; 0.4786286704993665; ...
                 0.4786286704993665; 0.2369268850561891; ...
                 0.2369268850561891];
-            pts = [0; -0.5384693101056831;  0.5384693101056831;...
+            pts = [0; -0.5384693101056831;  0.5384693101056831; ...
                 -0.9061798459386640; 0.9061798459386640];
     end
 end
 
+
 %% GLOSSARY:
-% p (int)                       : Polynomial Order of Shape Fnt.
-% Ne (int)                      : Desired # Elements in Mesh or Number of Elements
-% x0 (double)                   : Domain Start
-% h (Ne x 1 double)             : Spacing of Elements        
-% xglobe (1 x Nn double)        : Global Coordinates of Nodes 
-% Nn (int)                      : Number of nodes in domain
-% conn (Ne x Nn int)            : Connectivity Matrix
-% force (function handle)       : Loading Function
-% Efunc (int <!>)               : Function for Material Stiffness (E)
-% BC0 (double)                  : Boundary Condition at x = 0 (Left End)
-% BCL (double)                  : Boundary Condition at x = L (Right End)
-% BCType (int)                  : Type of Boundary Condition (0 for Dirichlet, 1 for Neumann)
-% duTrue (function handle)      : True Derivative of Displacement (for error computation)
-% uN (Nn x 1 double)            : Approximated Solution at Nodes
-% error (double)                : Error between True and Approximated Solution
-% pts (1 x N double)            : Gauss points.
-% ShapeFunc (N x (p+1) double)  : Shape function values at the points.
-% ShapeDer  (N x (p+1) double)  : Derivatives of shape functions at the points.
-% wts (1 x ptsNeed double)      : Gauss weights for integration.
+% p            : Polynomial order of the shape function
+% Ne           : Number of elements in the mesh
+% x0           : Start of the domain
+% h            : Element spacing (Ne x 1)
+% x_globe      : Global node coordinates (1 x Nn)
+% Nn           : Number of nodes in the domain
+% conn         : Connectivity matrix (Ne x Nn)
+% force        : Load function handle
+% E_func       : Material stiffness function handle
+% BC0          : Boundary condition at x = 0 (left boundary)
+% BC_L         : Boundary condition at x = L (right boundary)
+% BC_type      : Type of boundary condition (0 = Dirichlet, 1 = Neumann)
+% du_true      : True displacement derivative (for error calculation)
+% u_N          : Numerical solution at nodes (Nn x 1)
+% error        : Error between true and numerical solution
+% pts          : Gauss points (1 x N)
+% shape_func   : Shape function values at Gauss points (N x (p+1))
+% shape_der    : Derivatives of shape functions at Gauss points (N x (p+1))
+% wts          : Gauss weights for integration (1 x pts_need)
