@@ -14,7 +14,7 @@ It consists of various projects (1 so far) intended to tackle various FEM proble
 - Different boundary condition handling (Dirichlet, Neumann).
 
 ## Requirements
-- MATLAB (R2020b or newer recommended)
+- MATLAB (Written in R2024b, but only versions likely work.)
 
 ## Projects
 1. **1D Stick Problem**: Initial implementation solving a known 1D FEM problem and calculating the error.
