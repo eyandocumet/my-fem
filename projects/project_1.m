@@ -47,8 +47,8 @@ for i = 1:numel(kVec)   % loop through stiffness values
     while ~errFlag
         % mesh and solve FEM problem
         h = 1/Ne * ones(Ne,1);
-        [xglobe, Nn, conn] = Mesh1D(p, Ne, x0, h);
-        [uN, error] = myFEM1D(p, Ne, Nn, conn, xglobe, @(x) force(x, k_i), Efunc, BC0, BCL, BCType, @(x) duTrue(x, k_i) );
+        [xglobe, conn] = Mesh1D(p, Ne, x0, h);
+        [uN, error] = myFEM1D(p, Ne, conn, xglobe, @(x) force(x, k_i), Efunc, BC0, BCL, BCType, @(x) duTrue(x, k_i) );
 
         if error <= 0.05    % if error is above threshold, increment element count and try again
             minNe(i) = Ne;
@@ -89,9 +89,9 @@ k_j = kVec(j);
         Ne = NeVec(i);
         h = 1/Ne * ones(Ne,1);
 
-        [xglobe, Nn, conn] = Mesh1D(p, Ne, x0, h);
+        [xglobe, conn] = Mesh1D(p, Ne, x0, h);
 
-        [uN, error] = myFEM1D(p, Ne, Nn, conn, xglobe, @(x) force(x, k_j), Efunc, BC0, BCL, BCType, @(x) duTrue(x, k_j) );
+        [uN, error] = myFEM1D(p, Ne, conn, xglobe, @(x) force(x, k_j), Efunc, BC0, BCL, BCType, @(x) duTrue(x, k_j) );
 
         plot(xglobe, uN,...
             'color',getprop(colors,i),...
@@ -120,7 +120,7 @@ toc;
 disp('Saved to home directory.');
 
 %% P3c - Not computationally efficient to run this again, but makes code more legible. In future projects, will probably refactor.
-disp("Plot e^N (error) vs 1/N for each k (log-log)")
+disp("(c) Plot e^N (error) vs 1/N for each k (log-log)")
 tic;
 close all
 
@@ -178,25 +178,18 @@ disp('See chart.');
 
 %% Mesh1D - 
 % Generates a 1D mesh along a domain.
-function [xglobe, Nn, conn] = Mesh1D(p, Ne, x0, h)
-    Nn = p*Ne+1; % Number of nodes.
-    Nne = p + 1; % Number of nodes per element
-
-    % Initializing real domain positions
-    xglobe = x0*ones(1,Nn);
-    for node = 2:Nn
-        xglobe(node) = xglobe(node-1) + h(node-1);
-    end
-    
-    % Initializing connectivity matrix
-    % <!> NOTE: Temporary for project 1. Will need to upgrade later. <!>
-    conn = [(1:Nn-1)' (2:Nn)'];
+function [xglobe, conn] = Mesh1D(p, Ne, x0, h)
+    xglobe = x0 + [0, cumsum(h)']; % Mesh vector
+    conn = (1:Ne)' + (0:p); % Connectivity Matrix (Each row represents which global nodes correspond to the local node)
 end
+
 %% myFEM1D - 
 % Performs FEA on a 1D stick.
-function [uN, error] = myFEM1D(p, Ne, Nn, conn, xglobe, force, Efunc, BC0, BCL, BCType, duTrue)
-    % Defining weights and Gauss points
-    [wts, pts] = myGauss(p);
+function [uN, error] = myFEM1D(p, Ne, conn, xglobe, force, Efunc, BC0, BCL, BCType, duTrue)
+    
+    [~, Nn] = size(xglobe); % Number of nodes
+
+    [wts, pts] = myGauss(p); % Defining weights and Gauss points
 
     % Evaluating shape functions and their derivatives
     [ShapeFunc, ShapeDer] = evalShape(p,pts);
