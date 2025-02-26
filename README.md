@@ -1,4 +1,4 @@
-# matlab-fem-project
+# My MATLAB FEM Implementation
 
 <div style="text-align: center;">
   <img src="plot_k_32.png" alt="Plot of K = 32" width="400"/>
